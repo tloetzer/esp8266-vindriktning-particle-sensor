@@ -37,7 +37,9 @@ char MQTT_TOPIC_STATE[128];
 char MQTT_TOPIC_COMMAND[128];
 
 char MQTT_TOPIC_AUTOCONF_WIFI_SENSOR[128];
+char MQTT_TOPIC_AUTOCONF_PM1_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_PM25_SENSOR[128];
+char MQTT_TOPIC_AUTOCONF_PM10_SENSOR[128];
 
 bool shouldSaveConfig = false;
 
@@ -64,7 +66,9 @@ void setup() {
     snprintf(MQTT_TOPIC_STATE, 127, "%s/%s/state", FIRMWARE_PREFIX, identifier);
     snprintf(MQTT_TOPIC_COMMAND, 127, "%s/%s/command", FIRMWARE_PREFIX, identifier);
 
+    snprintf(MQTT_TOPIC_AUTOCONF_PM1_SENSOR, 127, "homeassistant/sensor/%s/%s_pm1/config", FIRMWARE_PREFIX, identifier);
     snprintf(MQTT_TOPIC_AUTOCONF_PM25_SENSOR, 127, "homeassistant/sensor/%s/%s_pm25/config", FIRMWARE_PREFIX, identifier);
+    snprintf(MQTT_TOPIC_AUTOCONF_PM10_SENSOR, 127, "homeassistant/sensor/%s/%s_pm10/config", FIRMWARE_PREFIX, identifier);
     snprintf(MQTT_TOPIC_AUTOCONF_WIFI_SENSOR, 127, "homeassistant/sensor/%s/%s_wifi/config", FIRMWARE_PREFIX, identifier);
 
     WiFi.hostname(identifier);
@@ -189,14 +193,16 @@ bool isMqttConnected() {
 
 void publishState() {
     DynamicJsonDocument wifiJson(192);
-    DynamicJsonDocument stateJson(604);
-    char payload[256];
+    DynamicJsonDocument stateJson(2000);
+    char payload[512];
 
     wifiJson["ssid"] = WiFi.SSID();
     wifiJson["ip"] = WiFi.localIP().toString();
     wifiJson["rssi"] = WiFi.RSSI();
 
+    stateJson["pm1"] = state.avgPM1;
     stateJson["pm25"] = state.avgPM25;
+    stateJson["pm10"] = state.avgPM10;
 
     stateJson["wifi"] = wifiJson.as<JsonObject>();
 
@@ -240,6 +246,20 @@ void publishAutoConfig() {
     autoconfPayload["device"] = device.as<JsonObject>();
     autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
     autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = identifier + String(" PM 1");
+    autoconfPayload["unit_of_measurement"] = "μg/m³";
+    autoconfPayload["value_template"] = "{{value_json.pm1}}";
+    autoconfPayload["unique_id"] = identifier + String("_pm1");
+    autoconfPayload["icon"] = "mdi:air-filter";
+
+    serializeJson(autoconfPayload, mqttPayload);
+    mqttClient.publish(&MQTT_TOPIC_AUTOCONF_PM1_SENSOR[0], &mqttPayload[0], true);
+
+    autoconfPayload.clear();
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
     autoconfPayload["name"] = identifier + String(" PM 2.5");
     autoconfPayload["unit_of_measurement"] = "μg/m³";
     autoconfPayload["value_template"] = "{{value_json.pm25}}";
@@ -248,6 +268,20 @@ void publishAutoConfig() {
 
     serializeJson(autoconfPayload, mqttPayload);
     mqttClient.publish(&MQTT_TOPIC_AUTOCONF_PM25_SENSOR[0], &mqttPayload[0], true);
+
+    autoconfPayload.clear();
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = identifier + String(" PM 10");
+    autoconfPayload["unit_of_measurement"] = "μg/m³";
+    autoconfPayload["value_template"] = "{{value_json.pm10}}";
+    autoconfPayload["unique_id"] = identifier + String("_pm10");
+    autoconfPayload["icon"] = "mdi:air-filter";
+
+    serializeJson(autoconfPayload, mqttPayload);
+    mqttClient.publish(&MQTT_TOPIC_AUTOCONF_PM10_SENSOR[0], &mqttPayload[0], true);
 
     autoconfPayload.clear();
 }

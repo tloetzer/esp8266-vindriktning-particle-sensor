@@ -24,29 +24,43 @@ namespace SerialCom {
     }
 
     void parseState(particleSensorState_t& state) {
-        /**
-         *         MSB  DF 3     DF 4  LSB
-         * uint16_t = xxxxxxxx xxxxxxxx
-         */
-        const uint16_t pm25 = (serialRxBuf[5] << 8) | serialRxBuf[6];
-
-        Serial.printf("Received PM 2.5 reading: %d\n", pm25);
-
-        state.measurements[state.measurementIdx] = pm25;
-
         state.measurementIdx = (state.measurementIdx + 1) % 5;
 
+        const uint16_t pm1  = (serialRxBuf[9] << 8 ^ 1) | serialRxBuf[10];
+        Serial.printf("Received PM 1 reading: %d\n", pm1);
+        state.pm1Measurements[state.measurementIdx] = pm1;
+
+        const uint16_t pm25 = (serialRxBuf[5] << 8) | serialRxBuf[6];
+        Serial.printf("Received PM 2.5 reading: %d\n", pm25);
+        state.pm25Measurements[state.measurementIdx] = pm25;
+
+        const uint16_t pm10 = (serialRxBuf[13] << 8 ^ 1) | serialRxBuf[14];
+        Serial.printf("Received PM 10 reading: %d\n", pm10);
+        state.pm10Measurements[state.measurementIdx] = pm10;
+
         if (state.measurementIdx == 0) {
-            float avgPM25 = 0.0f;
-
+            float avgPM1 = 0.0f;
             for (uint8_t i = 0; i < 5; ++i) {
-                avgPM25 += state.measurements[i] / 5.0f;
+                avgPM1 += state.pm1Measurements[i] / 5.0f;
             }
+            state.avgPM1 = avgPM1;
+            Serial.printf("New Avg PM1: %d\n", state.avgPM1);
 
+            float avgPM25 = 0.0f;
+            for (uint8_t i = 0; i < 5; ++i) {
+                avgPM25 += state.pm25Measurements[i] / 5.0f;
+            }
             state.avgPM25 = avgPM25;
-            state.valid = true;
-
             Serial.printf("New Avg PM25: %d\n", state.avgPM25);
+
+            float avgPM10 = 0.0f;
+            for (uint8_t i = 0; i < 5; ++i) {
+                avgPM10 += state.pm10Measurements[i] / 5.0f;
+            }
+            state.avgPM10 = avgPM10;
+            Serial.printf("New Avg PM10: %d\n", state.avgPM10);
+
+            state.valid = true;
         }
 
         clearRxBuf();
@@ -99,13 +113,13 @@ namespace SerialCom {
             parseState(state);
 
             Serial.printf(
-                "Current measurements: %d, %d, %d, %d, %d\n",
+                "CurrentPM2.5  measurements: %d, %d, %d, %d, %d\n",
 
-                state.measurements[0],
-                state.measurements[1],
-                state.measurements[2],
-                state.measurements[3],
-                state.measurements[4]
+                state.pm25Measurements[0],
+                state.pm25Measurements[1],
+                state.pm25Measurements[2],
+                state.pm25Measurements[3],
+                state.pm25Measurements[4]
             );
         } else {
             clearRxBuf();
