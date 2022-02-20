@@ -25,6 +25,7 @@ PubSubClient mqttClient;
 WiFiManagerParameter custom_mqtt_server("server", "mqtt server", Config::mqtt_server, sizeof(Config::mqtt_server));
 WiFiManagerParameter custom_mqtt_user("user", "MQTT username", Config::username, sizeof(Config::username));
 WiFiManagerParameter custom_mqtt_pass("pass", "MQTT password", Config::password, sizeof(Config::password));
+WiFiManagerParameter custom_identifier("identifier", "identifier", Config::identifier, sizeof(Config::identifier));
 
 uint32_t lastMqttConnectionAttempt = 0;
 const uint16_t mqttConnectionInterval = 60000; // 1 minute = 60 seconds = 60000 milliseconds
@@ -32,7 +33,7 @@ const uint16_t mqttConnectionInterval = 60000; // 1 minute = 60 seconds = 60000 
 uint32_t statusPublishPreviousMillis = 0;
 const uint16_t statusPublishInterval = 30000; // 30 seconds = 30000 milliseconds
 
-char identifier[24];
+char identifier[80];
 #define FIRMWARE_PREFIX "esp8266-vindriktning-particle-sensor"
 #define AVAILABILITY_ONLINE "online"
 #define AVAILABILITY_OFFLINE "offline"
@@ -73,7 +74,9 @@ void setup() {
 
     delay(3000);
 
-    snprintf(identifier, sizeof(identifier), "VINDRIKTNING-%X", ESP.getChipId());
+    Config::load();
+
+    snprintf(identifier, sizeof(identifier), Config::identifier);
     snprintf(MQTT_TOPIC_AVAILABILITY, 127, "%s/%s/status", FIRMWARE_PREFIX, identifier);
     snprintf(MQTT_TOPIC_STATE, 127, "%s/%s/state", FIRMWARE_PREFIX, identifier);
     snprintf(MQTT_TOPIC_COMMAND, 127, "%s/%s/command", FIRMWARE_PREFIX, identifier);
@@ -86,8 +89,6 @@ void setup() {
     snprintf(MQTT_TOPIC_AUTOCONF_WIFI_SENSOR, 127, "homeassistant/sensor/%s/%s_wifi/config", FIRMWARE_PREFIX, identifier);
 
     WiFi.hostname(identifier);
-
-    Config::load();
 
     setupWifi();
     setupOTA();
@@ -177,6 +178,7 @@ void setupWifi() {
     wifiManager.addParameter(&custom_mqtt_server);
     wifiManager.addParameter(&custom_mqtt_user);
     wifiManager.addParameter(&custom_mqtt_pass);
+    wifiManager.addParameter(&custom_identifier);
 
     WiFi.hostname(identifier);
     wifiManager.autoConnect(identifier);
@@ -185,6 +187,7 @@ void setupWifi() {
     strcpy(Config::mqtt_server, custom_mqtt_server.getValue());
     strcpy(Config::username, custom_mqtt_user.getValue());
     strcpy(Config::password, custom_mqtt_pass.getValue());
+    strcpy(Config::identifier, custom_identifier.getValue());
 
     if (shouldSaveConfig) {
         Config::save();
@@ -254,7 +257,7 @@ void publishAutoConfig() {
 
     device["identifiers"] = identifiers;
     device["manufacturer"] = "Ikea";
-    device["model"] = "VINDRIKTNING";
+    device["model"] = "Vindriktning";
     device["name"] = identifier;
     device["sw_version"] = "2021.08.0";
 

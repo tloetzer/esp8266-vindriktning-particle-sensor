@@ -9,11 +9,14 @@ namespace Config {
     char username[24] = "";
     char password[24] = "";
 
+    char identifier[80] = "default";
+
     void save() {
         DynamicJsonDocument json(512);
         json["mqtt_server"] = mqtt_server;
         json["username"] = username;
         json["password"] = password;
+        json["identifier"] = identifier;
 
         File configFile = SPIFFS.open("/config.json", "w");
         if (!configFile) {
@@ -41,6 +44,7 @@ namespace Config {
                         strcpy(mqtt_server, json["mqtt_server"]);
                         strcpy(username, json["username"]);
                         strcpy(password, json["password"]);
+                        strcpy(identifier, json["identifier"]);
                     }
                 }
             }
