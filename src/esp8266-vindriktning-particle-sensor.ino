@@ -33,6 +33,8 @@ const uint16_t mqttConnectionInterval = 60000; // 1 minute = 60 seconds = 60000 
 uint32_t statusPublishPreviousMillis = 0;
 const uint16_t statusPublishInterval = 30000; // 30 seconds = 30000 milliseconds
 
+const unsigned long REBOOT_INTERVAL = 1 * 60 * 60 * 1000;
+
 char identifier[80];
 #define FIRMWARE_PREFIX "esp8266-vindriktning-particle-sensor"
 #define AVAILABILITY_ONLINE "online"
@@ -155,6 +157,11 @@ void loop() {
     mqttClient.loop();
 
     const uint32_t currentMillis = millis();
+    if(currentMillis > REBOOT_INTERVAL)
+    {
+        ESP.restart();
+    }
+
     if (currentMillis - statusPublishPreviousMillis >= statusPublishInterval) {
         statusPublishPreviousMillis = currentMillis;
 
